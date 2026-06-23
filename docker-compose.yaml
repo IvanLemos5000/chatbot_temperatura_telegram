@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n-chatbot-clima
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      # Configuração básica do N8N
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=admin123
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+
+      # Variáveis de ambiente para o workflow
+      - OPENWEATHER_API_KEY=coloque_sua_chave_aqui
+      - TELEGRAM_BOT_TOKEN=coloque_seu_token_aqui
+    volumes:
+      - ./n8n-data:/home/node/.n8n
+    networks:
+      - n8n-network
+
+networks:
+  n8n-network:
+    driver: bridge
