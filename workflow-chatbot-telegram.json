@@ -1,0 +1,193 @@
+{
+  "name": "Chatbot Clima Telegram",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "credentials": {
+        "telegramApi": "YOUR_TELEGRAM_TOKEN"
+      },
+      "parameters": {
+        "updates": {
+          "allowedUpdates": ["message"]
+        }
+      }
+    },
+    {
+      "id": "2",
+      "name": "Formatar Entrada",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [450, 300],
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "queue",
+              "value": "={{ $json.message.text.toLowerCase().trim().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '') }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "3",
+      "name": "OpenWeather API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [650, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.openweathermap.org/data/2.5/weather",
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ $json.queue }}"
+            },
+            {
+              "name": "units",
+              "value": "metric"
+            },
+            {
+              "name": "lang",
+              "value": "pt_br"
+            },
+            {
+              "name": "appid",
+              "value": "={{ $env.OPENWEATHER_API_KEY }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "responseFormat": "json"
+          }
+        }
+      }
+    },
+    {
+      "id": "4",
+      "name": "Validar Resposta",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [850, 300],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.statusCode }}",
+              "operation": "equal",
+              "value2": "200"
+            },
+            {
+              "value1": "={{ $json.body?.main?.temp }}",
+              "operation": "isNot",
+              "value2": "null"
+            }
+          ]
+        },
+        "options": {
+          "combineOperation": "AND"
+        }
+      }
+    },
+    {
+      "id": "5",
+      "name": "Enviar Sucesso",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1050, 200],
+      "credentials": {
+        "telegramApi": "YOUR_TELEGRAM_TOKEN"
+      },
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $items('Telegram Trigger').last().json.message.chat.id }}",
+        "text": "={{ '🌤️ A temperatura em ' + json.body.name+′eˊde′+Math.round(json.body.name + ' é de ' + Math.round(json.body.name+′eˊde′+Math.round(json.body.main.temp) + '°C.' }}",
+        "additionalFields": {}
+      }
+    },
+    {
+      "id": "6",
+      "name": "Enviar Erro",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1050, 450],
+      "credentials": {
+        "telegramApi": "YOUR_TELEGRAM_TOKEN"
+      },
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $items('Telegram Trigger').last().json.message.chat.id }}",
+        "text": "❌ Cidade não encontrada. Use o formato Cidade,UF,BR (ex.: São Paulo,SP,BR).",
+        "additionalFields": {}
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Formatar Entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Entrada": {
+      "main": [
+        [
+          {
+            "node": "OpenWeather API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenWeather API": {
+      "main": [
+        [
+          {
+            "node": "Validar Resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Resposta": {
+      "main": [
+        [
+          {
+            "node": "Enviar Sucesso",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enviar Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "versionId": "abc123-def456-7890",
+  "active": false,
+  "settings": {},
+  "staticData": null,
+  "tags": []
+}
